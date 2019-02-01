@@ -1,0 +1,89 @@
+from Bio.Seq import Seq
+
+
+READ_DIRECTORY = "/mnt/volume/tmp/AAV_reads"
+META_TSV = "sample_info.tsv"
+
+
+def parse_sample_tsv():
+    basenames = []
+    sample_info = {}
+    from csv import DictReader
+    with open(META_TSV) as meta_tsv:
+        for row_d in DictReader(meta_tsv, delimiter="\t"):
+            basename = row_d["FASTQ_FILE"].split(".")[0]
+            if basename.startswith("Undetermined"):
+                continue
+            basenames.append(basename)
+
+            sample = row_d["SAMPLE_ID"]
+            if sample.lower() == "control":
+                set_n, pop, sample_n = "ctl", "ctl", "ctl"
+            else:
+                set_n, pop, sample_n = sample.split("_")
+            sample_info[basename] = set_n, pop, sample_n, row_d["RUN_DATE"], \
+                                    row_d["BASE_COUNT"], row_d["READ_COUNT"]
+    return basenames, sample_info
+
+
+FASTQ_BASENAMES, SAMPLE_INFO = parse_sample_tsv()
+
+
+rule targets:
+    input:
+        "output/merged-barcode-counts.tsv"
+        #expand("bc_counts/{reads}.bc-counts.txt", reads = FASTQ_BASENAMES)
+        #"bc_counts/AS-265291-LR-38495_R2.bc-counts.txt"
+
+
+rule count_barcodes_forward:
+    input:
+        READ_DIRECTORY + "/{reads}.fastq.gz"
+    output:
+        "bc_counts/{reads}.forward-bc-counts.txt"
+    params:
+        regex = lambda wildcards: r"(?<=[NGCAT]{33}TGCTC)[NGCAT]{15}(?=CAGGG[NGCAT]{45})"
+    shell:
+        "zgrep -o -P {params.regex:q} {input} | sort | uniq -c | sort -rn > {output}"
+
+
+rule count_barcodes_revcomp:
+    input:
+        READ_DIRECTORY + "/{reads}.fastq.gz"
+    output:
+        "bc_counts/{reads}.revcomp-bc-counts.txt"
+    params:
+        regex = lambda wildcards: r"(?<=[NGCAT]{45}CCCTG)[NGCAT]{15}(?=GAGCA[NGCAT]{33})"
+    shell:
+        "zgrep -o -P {params.regex:q} {input} | sort | uniq -c | sort -rn > {output}"
+
+
+rule count_barcodes:
+    input:
+        forward = "bc_counts/{reads}.forward-bc-counts.txt",
+        revcomp = "bc_counts/{reads}.revcomp-bc-counts.txt",
+    output:
+        "bc_counts/{reads}.bc-counts.tsv",
+    run:
+        sample_info = wildcards.reads.split("_") + list(SAMPLE_INFO[wildcards.reads])
+
+        fwd_f, rev_f = input.forward, input.revcomp
+        with open(fwd_f) as fwd, open(rev_f) as rev, open(output[0], "w") as out:
+            for line in fwd:
+                cnt, bc = line.strip().split()
+                out_row = [cnt, bc, "forward"] + sample_info
+                out.write("\t".join(out_row) + "\n")
+            for line in rev:
+                cnt, bc = line.strip().split()
+                revcomp_bc = str(Seq(bc).reverse_complement())
+                out_row = [cnt, revcomp_bc, "revcomp"] + sample_info
+                out.write("\t".join(out_row) + "\n")
+
+
+rule merge_output:
+    input:
+        expand("bc_counts/{reads}.bc-counts.tsv", reads = FASTQ_BASENAMES)
+    output:
+        "output/merged-barcode-counts.tsv"
+    shell:
+        "cat {input} > {output}"
