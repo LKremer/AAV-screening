@@ -10,7 +10,7 @@ require(svglite)
 theme_set(theme_minimal())
 
 #' Define all input files:
-bc_count_file <- "merged-barcode-counts.tsv.gz"
+bc_count_file <- "../01_counting-barcodes/AAV-lib3/output/merged-barcode-counts.tsv.gz"
 bc_info_file <- "Lib3_Overview_Sascha.csv"
 sample_info_file <- "Lib3_cell_counts.tsv"
 
@@ -280,9 +280,9 @@ bc_props_invitro %>%
 #' Write supplementary table
 for (ct in unique(bc_props_all$celltype)) {
   if (ct == "NSC") {
-    outf <- sprintf("plots/supplement/AAVlib3_%s_inVitro_serotype_proportions.tsv", ct)
+    outf <- sprintf("tables/supplement/AAVlib3_%s_inVitro_serotype_proportions.tsv", ct)
   } else {
-    outf <- sprintf("plots/supplement/AAVlib3_%s_serotype_proportions.tsv", ct)
+    outf <- sprintf("tables/supplement/AAVlib3_%s_serotype_proportions.tsv", ct)
   }
   bc_props_all %>% filter( celltype == ct) %>%
     dplyr::select( celltype, set, AAV_ID, norm_proportion) %>%

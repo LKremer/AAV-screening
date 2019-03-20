@@ -279,7 +279,7 @@ bc_props_invitro %>%
 
 #' Write supplementary table
 for (ct in unique(bc_props$celltype)) {
-  outf <- sprintf("tables/AAVlib1_%s_serotype_proportions.tsv", ct)
+  outf <- sprintf("tables/supplement/AAVlib1_%s_serotype_proportions.tsv", ct)
   bc_props %>% filter( celltype == ct) %>%
     dplyr::select( celltype, set, AAV_ID, norm_proportion) %>%
     group_by( celltype, AAV_ID) %>%
