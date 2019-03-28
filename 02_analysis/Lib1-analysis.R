@@ -287,8 +287,19 @@ for (ct in unique(bc_props_all$celltype)) {
   bc_props_all %>% filter( celltype == ct) %>%
     dplyr::select( celltype, set, AAV_ID, norm_proportion) %>%
     group_by( celltype, AAV_ID) %>%
-    mutate( average = mean( norm_proportion)) %>% ungroup %>%
+    mutate( average = mean( norm_proportion, na.rm=T)) %>% ungroup %>%
     spread( key = set, value = norm_proportion) %>% arrange(-average) %>%
     dplyr::rename( population=celltype, serotype=AAV_ID) %>%
     write_tsv( outf)
 }
+
+bc_props %>%
+  unite( population, celltype, set, sep = " ") %>%
+  dplyr::select( population, AAV_ID, norm_proportion) %>%
+  group_by( AAV_ID) %>%
+  mutate( average = mean( norm_proportion, na.rm=T)) %>% ungroup %>%
+  spread( key = population, value = norm_proportion) %>% arrange(-average) %>%
+  dplyr::select( serotype=AAV_ID, average, starts_with("aN"), starts_with("qN"), starts_with("Pro"),
+                 starts_with("Neur"), starts_with("Ast"), starts_with("Oli"), starts_with("Epe")) %>%
+  write_tsv( "tables/supplement/AAVlib1_overall_serotype_proportions.tsv")
+

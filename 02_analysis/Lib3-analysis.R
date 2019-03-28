@@ -287,7 +287,7 @@ for (ct in unique(bc_props_all$celltype)) {
   bc_props_all %>% filter( celltype == ct) %>%
     dplyr::select( celltype, set, AAV_ID, norm_proportion) %>%
     group_by( celltype, AAV_ID) %>%
-    mutate( average = mean( norm_proportion)) %>% ungroup %>%
+    mutate( average = mean( norm_proportion, na.rm=T)) %>% ungroup %>%
     spread( key = set, value = norm_proportion) %>% arrange(-average) %>%
     dplyr::rename( population=celltype, serotype=AAV_ID) %>%
     write_tsv( outf)
