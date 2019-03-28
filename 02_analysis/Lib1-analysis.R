@@ -278,9 +278,13 @@ bc_props_invitro %>%
   write_csv("tables/AAVlib1_AAV-barcode-proportions_InVitro.csv")
 
 #' Write supplementary table
-for (ct in unique(bc_props$celltype)) {
-  outf <- sprintf("tables/supplement/AAVlib1_%s_serotype_proportions.tsv", ct)
-  bc_props %>% filter( celltype == ct) %>%
+for (ct in unique(bc_props_all$celltype)) {
+  if (ct == "NSC") {
+    outf <- sprintf("tables/supplement/AAVlib1_%s_inVitro_serotype_proportions.tsv", ct)
+  } else {
+    outf <- sprintf("tables/supplement/AAVlib1_%s_serotype_proportions.tsv", ct)
+  }
+  bc_props_all %>% filter( celltype == ct) %>%
     dplyr::select( celltype, set, AAV_ID, norm_proportion) %>%
     group_by( celltype, AAV_ID) %>%
     mutate( average = mean( norm_proportion)) %>% ungroup %>%
