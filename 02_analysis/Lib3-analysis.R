@@ -28,7 +28,7 @@ raw_bc_cnt <- bc_count_file %>%
     TRUE ~ set)) %>%
   left_join( sample_info, by = c("set", "celltype", "sample_n")) %>%
   filter( !ignore) %>% dplyr::select( -n_facs_events, -ignore)  # remove some hand-selected samples, marked with ignore=TRUE
-# A pipetting error occurred in these few tubes, hence we're excluding them from the analysis to be on the safe side
+# A pipetting error occurred in these few tubes, hence we're excluding them from the analysis
 
 bc_info <- read_csv( bc_info_file,
                      col_names = c("AAV_ID", "barcode_seq", "AAV_lib_read_n"),
@@ -37,11 +37,10 @@ bc_info <- read_csv( bc_info_file,
 
 
 
-
 #' Since we got some sequencing errors:
 #' Take all identified barcodes and find the most similar actual barcode (Levenshtein distance < 3)
 nearest_bc <- tibble( unknown_barcode = unique(raw_bc_cnt$barcode_seq)) %>%
-  mutate( matched_barcode = bc_info$barcode_seq[ amatch( unknown_barcode, bc_info$barcode_seq, maxDist = 2, method = "lv")] ) %>%
+  mutate( matched_barcode = bc_info$barcode_seq[ stringdist::amatch( unknown_barcode, bc_info$barcode_seq, maxDist = 2, method = "lv")] ) %>%
   filter( !is.na(matched_barcode))
 
 #' Set 15-mers for which we can't find a known barcode within a Levenshtein distance of 2 to NA.
@@ -49,6 +48,16 @@ nearest_bc <- tibble( unknown_barcode = unique(raw_bc_cnt$barcode_seq)) %>%
 raw_bc_cnt_match <- raw_bc_cnt %>%
   left_join( nearest_bc, by = c("barcode_seq" = "unknown_barcode")) %>%
   dplyr::select( -barcode_seq, barcode_seq = matched_barcode)
+
+#' How many 15-mers match exactly, how many didn't match anything?
+raw_bc_cnt %>%
+  left_join( nearest_bc, by = c("barcode_seq" = "unknown_barcode")) %>%
+  mutate(match = case_when(is.na(matched_barcode) ~ "no match",
+                           barcode_seq == matched_barcode ~ "exact",
+                           barcode_seq != matched_barcode ~ "<3 mismatches")) %>%
+  group_by(match) %>%
+  summarize(total_count = sum(barcode_count)) %>%
+  mutate(percentage = 100 * total_count / sum(total_count))
 
 #' merge all barcode counts within tubes (=technical replicates)
 bc_cnt <- raw_bc_cnt_match %>%

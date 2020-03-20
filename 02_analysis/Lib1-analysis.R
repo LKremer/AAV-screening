@@ -49,6 +49,16 @@ raw_bc_cnt_match <- raw_bc_cnt %>%
   left_join( nearest_bc, by = c("barcode_seq" = "unknown_barcode")) %>%
   dplyr::select( -barcode_seq, barcode_seq = matched_barcode)
 
+#' How many 15-mers match exactly, how many didn't match anything?
+raw_bc_cnt %>%
+  left_join( nearest_bc, by = c("barcode_seq" = "unknown_barcode")) %>%
+  mutate(match = case_when(is.na(matched_barcode) ~ "no match",
+                           barcode_seq == matched_barcode ~ "exact",
+                           barcode_seq != matched_barcode ~ "<3 mismatches")) %>%
+  group_by(match) %>%
+  summarize(total_count = sum(barcode_count)) %>%
+  mutate(percentage = 100 * total_count / sum(total_count))
+
 #' merge all barcode counts within tubes (=technical replicates)
 bc_cnt <- raw_bc_cnt_match %>%
   group_by( set, celltype, sample_n, barcode_seq) %>%
