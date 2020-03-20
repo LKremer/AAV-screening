@@ -19,8 +19,6 @@ These scripts can be run with [Snakemake](https://snakemake.readthedocs.io).
 
 ## Computational Methods
 
-__This section is currently under construction__
-
 ### Counting barcode occurrences in FASTQ files
 NGS-samples were sequenced and demultiplexed by the DKFZ Genomics and Proteomics Core Facility using `bcl2fastq` 2.19.0.316.
 This resulted in two (paired-end) FASTQ-files per sample.
@@ -54,8 +52,14 @@ This mean of this value was then used to rank AAVs within and across celltypes (
 Two AAVs that performed consistently well across replicates and in both experiments were chosen for further validation.
 All scripts used in this analysis are available at https://github.com/LKremer/AAV-screening .
 
+
+
+
+
+
 ## Old methods section
 __replaced by the new section above__
+
 To quantify the distribution of each capsid-specific barcode sample, we first excluded spike-in
 RNA and erroneous reads by only considering reads matching the expected structure of the
 amplicon. This was achieved with a regular expression matching of the known ±5bp flanking
