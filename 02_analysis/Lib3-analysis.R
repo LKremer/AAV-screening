@@ -28,6 +28,7 @@ raw_bc_cnt <- bc_count_file %>%
     TRUE ~ set)) %>%
   left_join( sample_info, by = c("set", "celltype", "sample_n")) %>%
   filter( !ignore) %>% dplyr::select( -n_facs_events, -ignore)  # remove some hand-selected samples, marked with ignore=TRUE
+# A pipetting error occurred in these few tubes, hence we're excluding them from the analysis to be on the safe side
 
 bc_info <- read_csv( bc_info_file,
                      col_names = c("AAV_ID", "barcode_seq", "AAV_lib_read_n"),
