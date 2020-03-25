@@ -48,9 +48,9 @@ The AAV libraries used for transduction contain slightly unequal proportions of 
 To remedy this problem, barcode counts were further scaled by their abundance in the transduction library, so that barcode counts corresponding to more frequent AAV capsids were decreased and vice versa.
 ### Identification of candidate AAVs with high transduction efficiency 
 For each sample, normalized barcode proportions were calculated by dividing the normalized barcode counts by the total number of valid barcodes.
-This mean of this value was then used to rank AAVs within and across celltypes (Figure 1d-i).
+The mean of these proportions was then used to rank AAVs within and across celltypes (Figure 1d-i).
 Two AAVs that performed consistently well across replicates and in both experiments were chosen for further validation.
-All scripts used in this analysis are available at https://github.com/LKremer/AAV-screening .
+All scripts used in the analysis are available at https://github.com/LKremer/AAV-screening .
 
 
 
