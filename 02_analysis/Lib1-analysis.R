@@ -73,7 +73,7 @@ bc_cnt <- raw_bc_cnt_match %>%
 #' so we have to add the zero-counts manually (cause we still need the zeros to calculate e.g. the mean) 
 not_observed <- bc_cnt %>% distinct(celltype, set) %>% unite(combo, sep="&") %>% pull(combo) %>%
   expand.grid(unique(bc_cnt$barcode_seq), stringsAsFactors=F) %>% as_tibble %>%
-  separate(Var1, c("celltype", "set"), sep="&") %>% dplyr::rename(barcode_seq=Var2) %>%
+  separate(Var1, c("set", "celltype"), sep="&") %>% dplyr::rename(barcode_seq=Var2) %>%
   mutate( barcode_count = 0) %>% anti_join( bc_cnt, by = c("set", "celltype", "barcode_seq"))
 
 #' Add the zero-count barcodes and find the AAV name that corresponds to each barcode:
