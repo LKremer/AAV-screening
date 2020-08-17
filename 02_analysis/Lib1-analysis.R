@@ -72,7 +72,7 @@ bc_cnt <- raw_bc_cnt_match %>%
 #' Sometimes an AAV has 0 barcode counts in a sample. In that case, it is not reported in the barcode count input file,
 #' so we have to add the zero-counts manually (cause we still need the zeros to calculate e.g. the mean) 
 not_observed <- bc_cnt %>% distinct(celltype, set) %>% unite(combo, sep="&") %>% pull(combo) %>%
-  expand.grid(unique(bc_cnt$barcode_seq), stringsAsFactors=F) %>% as_tibble %>%
+  expand.grid(unique(bc_info$barcode_seq), stringsAsFactors=F) %>% as_tibble %>%
   separate(Var1, c("set", "celltype"), sep="&") %>% dplyr::rename(barcode_seq=Var2) %>%
   mutate( barcode_count = 0) %>% anti_join( bc_cnt, by = c("set", "celltype", "barcode_seq"))
 
