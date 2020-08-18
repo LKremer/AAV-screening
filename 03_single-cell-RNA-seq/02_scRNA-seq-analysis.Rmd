@@ -1,0 +1,297 @@
+---
+title: "02_scRNA-seq-analysis.Rmd"
+author: "Lukas"
+date: "8/17/2020"
+output: html_document
+---
+
+# Loading required packages and defining some settings
+```{r, echo=FALSE}
+library(here)
+library(Matrix)
+library(tidyverse)
+library(magrittr)
+library(ggpointdensity)
+library(patchwork)
+library(DESeq2)
+library(shadowtext)
+library(sparseMatrixStats)
+library(pheatmap)
+```
+
+```{r}
+theme_set(theme_bw() + theme(text = element_text(family = 'Arial'),
+                             panel.grid.minor = element_blank(),    # remove axis grid
+                             panel.grid.major = element_blank(),
+                             strip.background = element_blank(),    # remove silly gray bg of facet title
+                             strip.text = element_text(hjust = 0)   # left-justify facets
+))
+
+celltype_colors <- c("ENB"="#e8a623ff", "LNB"="#e17827ff", "TAP"="#20854EFF", "aNSC"="#BC3C29FF",
+                     "qNSC"="#0072B5FF", "Ep"="#7876B1FF", "other"="gray50", "MG"="#6F99ADFF")
+```
+
+# Read the count matrix and metadata
+```{r}
+metadata <- read_tsv(here("03_single-cell-RNA-seq", "count_matrix", "metadata.tsv.gz"),
+                     col_types = "ccnnncnnclnnncccnnc") %>%
+  mutate(transgene_exp = fct_relevel(transgene_exp, "eYFP- NeoR-", "eYFP- NeoR+", "eYFP+ NeoR+"),
+         celltype = fct_relevel(celltype, c("qNSC", "aNSC", "TAP", "ENB", "LNB", "Ep", "other")))
+```
+
+```{r}
+colNames_genes <- read_tsv(here("03_single-cell-RNA-seq", "count_matrix", "colNames_genes.tsv.gz"),
+                           col_names = c("gene_id_version", "gene_symbol"),
+                           col_types = "cc")
+symbol2ensg <- colNames_genes %>% dplyr::select(2, 1) %>% deframe()
+ensg2symbol <- colNames_genes %>% deframe()
+rowNames_cells <- read_tsv(here("03_single-cell-RNA-seq", "count_matrix", "rowNames_cellBarcodes.tsv.gz"),
+                           col_names = "barcode", col_types = "c")
+
+raw_counts <- readMM(here("03_single-cell-RNA-seq", "count_matrix", "raw_counts_cellXgene.mtx.gz")) %>%
+  set_rownames(rowNames_cells$barcode) %>%
+  set_colnames(colNames_genes$gene_id_version) %>% 
+  as("dgCMatrix")
+
+trans_counts <- log1p(1e4 * raw_counts / sparseMatrixStats::rowSums2(raw_counts))
+```
+
+A little test plot showing the number of UMIs and genes per cell
+```{r}
+(metadata %>%
+  ggplot(aes(x = UMAP1, y = -UMAP2, color = n_genes))) +
+(metadata %>%
+  ggplot(aes(x = UMAP1, y = -UMAP2, color = n_UMIs))) &
+  geom_point(size=.3) &
+  coord_fixed() &
+  scale_color_viridis_c()
+```
+
+# Figure 3 plots
+
+## Figure 3b
+
+Plot the UMAP that shows our cell types
+```{r}
+# define the location and text of the cell type labels to be added to the UMAP
+ct_plotlabs <- tribble(
+  ~celltype, ~UMAP1, ~UMAP2,
+  "qNSC", 18.5, -3.7,
+  "aNSC", 16, 1.5,
+  "TAP", 16.5, 6.5,
+  "ENB", 14.5, 10,
+  "LNB", 14, 15,
+  "Ep", -1.3, 6,
+  "other", 5, 6,
+)
+
+metadata %>%
+  ggplot(aes(y = -UMAP2, x = UMAP1, color = celltype)) +
+  geom_point(size = .4, stroke = 0) +
+  aes(label = celltype) +
+  geom_text(data = ct_plotlabs, fontface="bold") +
+  coord_fixed() +
+  scale_color_manual(values = celltype_colors) +
+  theme(legend.position = "none") +
+  labs(x = "UMAP1", y = "UMAP2")
+```
+
+... and the small pie charts that show the proportion of off-target cells in each replicate. Since we're interested in the performance of AAV1_P5, we discard all unlabeled (eYFP negative) cells before calculating this proportion.  
+In this case, off-target cells are defined as cells that are not in a cluster that is part of the main lineage (qNSC -> LNB).
+```{r}
+off_target <- metadata %>%
+  filter(eYFP_counts > 0) %>% 
+  group_by(sample, in_lineage) %>% 
+  tally() %>% ungroup() %>% 
+  pivot_wider(names_from = "in_lineage", values_from = "n") %>% 
+  mutate(label = paste0(formatC(100 * `FALSE` / (`FALSE` + `TRUE`), format = "f", digits = 1), "%"))
+
+pie1 <- metadata %>% filter(sample == "sample #1" & eYFP_counts > 0) %>%
+  left_join(off_target, by = "sample") %>%
+  ggplot(aes(x = "", fill = in_lineage, label = label)) +
+  geom_bar(width=1, color="white")
+
+pie2 <- metadata %>% filter(sample == "sample #2" & eYFP_counts > 0) %>%
+  left_join(off_target, by = "sample") %>%
+  ggplot(aes(x = "", fill = in_lineage, label = label)) +
+  geom_bar(width=1, color="white")
+
+(pie1 + pie2) &
+  scale_fill_manual(values = c("TRUE"="gray70", "FALSE"="gray50")) &
+  coord_polar("y", start=0, direction=-1L) &
+  theme_void() &
+  theme(legend.position = "none", strip.text = element_text(hjust=1))
+```
+
+## Figure 3c
+```{r}
+group_counts <- metadata %>%
+  mutate(sorting = if_else(celltype %in% c("LNB", "Ep"), "eYFP+", "")) %>%
+  filter(celltype != "other") %>% 
+  group_by(celltype, sample, sorting) %>%
+  tally()
+
+metadata %>%
+  filter(celltype != "other") %>%
+  mutate(transgene_exp = fct_relevel(transgene_exp, "eYFP- NeoR-", "eYFP- NeoR+", "eYFP+ NeoR+"),
+         sorting = if_else(celltype %in% c("LNB", "Ep"), "eYFP+", "")) %>%
+  #left_join(ctlabel) %>%
+  ggplot(aes(y = fct_rev(celltype), fill = transgene_exp)) +
+  geom_bar(position="fill") +  
+  geom_text(data = group_counts, size = 2,
+            mapping = aes(y = fct_rev(celltype), x = .15, label = str_c("m=", n)),
+            inherit.aes = F) +
+  facet_grid(sorting ~ sample, space = "free", scales='free_y') +
+  scale_fill_manual(values=c("eYFP- NeoR+"="#008000", "eYFP+ NeoR+"="#80A206", "eYFP- NeoR-"="gray75", "eYFP+ NeoR-"="#ffc40c")) +
+  scale_x_continuous(labels = scales::percent_format(accuracy = 1),
+                     limits = c(0,1), breaks=0:2/2, minor_breaks = 0:4/4) +
+  #scale_y_discrete(label = ctlabel) +
+  labs(x = "fraction of cells", y = "", fill = "") +
+  theme(legend.position = "top", legend.direction = "horizontal", axis.text.x = element_text(angle = 45, hjust = 1)) +
+  guides(fill = guide_legend(reverse = TRUE))
+```
+
+## Figure 3d
+```{r}
+metadata %>%
+  mutate(sorting = if_else(celltype %in% c("LNB", "Ep"), "eYFP+", "")) %>%
+  filter(celltype != "other") %>% 
+  ggplot(aes(y = fct_rev(celltype), x = n_UMIs/1000, color = celltype)) +
+  ggbeeswarm::geom_quasirandom(size = .25, stroke = 0, groupOnX=F) + 
+  geom_boxplot(color = "black", outlier.shape = NA, fill = NA, size = .5) +
+  scale_color_manual(values = celltype_colors) +
+  facet_grid(sorting ~ ., scales = "free", space = "free") +
+  labs(y="", x = "total UMI count\n(in thousands)") +
+  theme(legend.position = "none") +
+  xlim(c(NA, 50))
+```
+
+## Figure 3e
+
+Add a penalty to prevent tiny mu_R (tiny expression strength of the resistance gene)  
+blue = 0  
+red = the minimum reasonable value for mu_R we previously observed without this penalty (sometimes it would just go to almost zero, which obviously doesn't make sense and results in very wrong predictions of almost 100% labeling efficiency).
+```{r}
+penalty <- function(mu) {
+  1 / (1 + exp(9e5 * mu - 9))
+}
+
+tibble(mu = seq(0, 1e-4, length.out = 10000)) %>% 
+  mutate(pen = penalty(mu)) %>% 
+  ggplot(aes(x = mu, y = pen)) +
+  geom_line() +
+  geom_vline(xintercept = 2.11e-5, color = "red") +
+  geom_vline(xintercept = 0, color = "blue")
+```
+
+Define the logit-transform and its inverse
+```{r}
+logit <- function(x) {log(x / (1 - x))}
+invlogit <- function(x) {exp(x) / (1 + exp(x))}
+```
+Define starting points for our parameters
+```{r}
+starts_2genes <- c(
+  logit(.5),     # p = labeling efficiency
+  logit(.05),    # q = proportion of cells with incomplete Cre-mediated excision
+  log(10^-3.4),  # µ_Y = overdispersion parameter of eYFP expression
+  log(.2),       # alpha_Y = expression strength of eYFP (only in eYFP-expressing cells of course)
+  log(10^-4.4),  # µ_R = overdispersion parameter of NeoR expression
+  log(.2)        # alpha_R = expression strength of NeoR (only in NeoR-expressing cells of course)
+)
+```
+
+Define our likelihood function as written in the Methods section.  
+I also added some lines afterwards that make this function usable in combination with `dplyr::summarise`.
+```{r}
+mle_labeling_efficiency <- function(kY, kR, S, ...) {
+  optim(
+    starts_2genes,
+    function(x) {
+      p <- invlogit(x[1])
+      q <- invlogit(x[2])
+      muY <- exp(x[3])
+      aY <- exp(x[4])
+      muR <- exp(x[5])
+      aR <- exp(x[6])
+
+      -sum(log(
+        p * q * dnbinom(kY, mu = muY * S, size = 1 / aY) * dnbinom(kR, mu = muR * S, size = 1 / aR) +
+        ifelse(kR == 0, p * (1-q) * dnbinom(kY, mu = muY * S, size = 1 / aY), 0) +
+        ifelse(kY == 0, (1-p) * dnbinom(kR, mu = muR * S, size = 1 / aR), 0) -
+        penalty(muR)
+      ))
+    },
+    ...
+  ) %>% unlist() %>%
+    as_tibble_row() %>%
+    mutate(
+      logL = -value,
+      p = invlogit(par1),
+      q = invlogit(par2),
+      muY = exp(par3),
+      aY = exp(par4),
+      muR = exp(par5),
+      aR = exp(par6)
+    ) %>%
+    dplyr::select(-starts_with("par"), -counts.function, -counts.gradient, -value)
+}
+```
+
+Use the above likelihood function to estimate our parameters for every cell type per sample
+```{r}
+mle_res <- metadata %>%
+  group_by(celltype, sample) %>% 
+  summarise(mle_labeling_efficiency(kY=eYFP_counts, kR=NeoR_counts, S=n_UMIs, control=list("maxit"=5000)))
+```
+
+```{r}
+mle_res_fmt <- mle_res %>%
+  filter(celltype != "other") %>%
+  mutate(yfp_only = p*(1-q),
+         res_only = 1-p,
+         both = p*q,
+         sorting = if_else(celltype %in% c("LNB", "Ep"), "eYFP+", "")) %>%
+  mutate(label = paste0(formatC(100 * (yfp_only + both), format = "f", digits = 0), "%"))
+
+mle_res_fmt %>%
+  pivot_longer(c("yfp_only", "res_only", "both"), names_to = "transduction", values_to = "fraction") %>%
+  mutate(transduction = fct_relevel(transduction, "res_only", "both", "yfp_only")) %>%
+  ggplot(aes(y = fct_rev(celltype), fill = transduction, x = fraction)) +
+  geom_col() +
+  geom_text(data = mle_res_fmt, size = 2,
+            mapping = aes(y = fct_rev(celltype), x = yfp_only + both - .07, label = label),
+            inherit.aes = F) +
+  facet_grid(sorting ~ sample, scales = "free", space = "free") +
+  scale_fill_manual(values=c("res_only"="#008000", "both"="#80A206", "yfp_only"="#ffc40c"),
+                    labels=c("not transduced", "transduced heterozygous", "transduced")) +
+  scale_x_continuous(labels = scales::percent_format(accuracy = 1),
+                     limits = c(0,1), breaks=0:2/2) +
+  labs(x = "estimated fraction", y = "", fill = "") +
+  theme(legend.position = "top", legend.direction = "horizontal", axis.text.x = element_text(angle = 45, hjust = 1)) +
+  guides(fill = guide_legend(reverse = TRUE))
+```
+
+... to be continued ...
+
+## Figure 3f
+```{r}
+
+```
+
+
+
+
+
+
+
+
+# Figure S4 (bottom half)
+
+## Figure S4 h
+
+
+
+
+
+
