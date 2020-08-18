@@ -1,1 +1,1 @@
-I am currently in the process of adding all analysis scripts for the scRNA-seq, I'll be done in 1-2 days, sorry for the slight delay!
+The code for the whole scRNA-seq analysis is given in the python script starting with 01 and the R script (Rmarkdown file) starting with 02.
