@@ -1,4 +1,8 @@
-# Part I: Screening of different AAV serotypes with RNA sequencing
+# Part I: Screening of AAV serotypes with RNA sequencing
+
+## Data
+#### Raw sequencing results (FASTQ)
+These files are deposited at GEO (accession [GSE145172](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE145172))
 
 ## Results
 #### All plots of barcode / serotype proportions are here:
@@ -18,7 +22,7 @@ These scripts can be run with [Snakemake](https://snakemake.readthedocs.io).
 [02_analysis/Lib3-analysis.R](02_analysis/Lib3-analysis.R)  
 
 
-# Part II: single cell RNA-seq of cells labeled with AAV1_P5
+# Part II: Single cell RNA-seq of cells labeled with AAV1_P5
 ## Data
 #### Our filtered single cell RNA-seq count matrix, including row- and column labels and metadata
 [03_single-cell-RNA-seq/count_matrix/](03_single-cell-RNA-seq/count_matrix/)
