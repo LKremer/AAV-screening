@@ -1,4 +1,4 @@
-# AAV-screening
+# Part I: Screening of different AAV serotypes with RNA sequencing
 
 ## Results
 #### All plots of barcode / serotype proportions are here:
@@ -17,7 +17,21 @@ These scripts can be run with [Snakemake](https://snakemake.readthedocs.io).
 [02_analysis/Lib1-analysis.R](02_analysis/Lib1-analysis.R)  
 [02_analysis/Lib3-analysis.R](02_analysis/Lib3-analysis.R)  
 
-## Computational Methods
+
+# Part II: single cell RNA-seq of cells labeled with AAV1_P5
+## Data
+#### Our filtered single cell RNA-seq count matrix, including row- and column labels and metadata
+[03_single-cell-RNA-seq/count_matrix/](03_single-cell-RNA-seq/count_matrix/)
+## Code
+#### The Python code used to get from a raw unfiltered count matrix to our UMAP and clustering
+[03_single-cell-RNA-seq/01_scRNA-seq-preprocessing.html](03_single-cell-RNA-seq/01_scRNA-seq-preprocessing.html)
+#### The R code used for the analyses depicted in Figures 3 and S4h-l, including these plots
+[03_single-cell-RNA-seq/02_scRNA-seq-analysis.Rmd](03_single-cell-RNA-seq/02_scRNA-seq-analysis.Rmd)
+
+
+
+
+## Computational Methods of Part I (AAV screening):
 
 ### Counting barcode occurrences in FASTQ files
 NGS-samples were sequenced and demultiplexed by the DKFZ Genomics and Proteomics Core Facility using `bcl2fastq` 2.19.0.316.
@@ -50,24 +64,4 @@ To remedy this problem, barcode counts were further scaled by their abundance in
 For each sample, normalized barcode proportions were calculated by dividing the normalized barcode counts by the total number of valid barcodes.
 The mean of these proportions was then used to rank AAVs within and across celltypes (Figure 1d-i).
 Two AAVs that performed consistently well across replicates and in both experiments were chosen for further validation.
-All scripts used in the analysis are available at https://github.com/LKremer/AAV-screening .
-
-
-
-
-
-
-## Old methods section
-__replaced by the new section above__
-
-To quantify the distribution of each capsid-specific barcode sample, we first excluded spike-in
-RNA and erroneous reads by only considering reads matching the expected structure of the
-amplicon. This was achieved with a regular expression matching of the known ±5bp flanking
-regions around the variable 15bp barcodes. 15-mers were then counted and assigned to capsids,
-allowing for a maximum of two mismatches in the barcode sequence. After scaling by the number
-of FACS events in the corresponding batch, barcode counts were added up for each cell type. To
-account for variations in the distribution of capsids within the two input libraries, we normalized
-barcode counts by their frequency in the respective input library. Barcode proportions (counts
-divided by the total number of valid barcodes) were then averaged over all sets related to the
-respective cell type, to rank AAV capsids by their transduction efficiency. All scripts used to
-quantify barcode frequencies are available at https://github.com/LKremer/AAV-screening .
+All scripts used in the analysis are available at https://github.com/LKremer/AAV-screening.
