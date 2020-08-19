@@ -1,12 +1,12 @@
 ---
-title: "02_scRNA-seq-analysis.Rmd"
-author: "Lukas"
+title: "Single cell RNA-seq of cells labeled with AAV1_P5"
+author: "Lukas PM Kremer"
 date: "8/17/2020"
 output: html_document
 ---
 
-# Loading required packages and defining some settings
-```{r, echo=FALSE}
+Loading required packages and defining some settings
+```{r, message=FALSE, warning=FALSE, results=FALSE}
 library(tidyverse)
 library(here)
 library(Matrix)
@@ -18,6 +18,7 @@ library(sparseMatrixStats)
 library(Seurat)
 ```
 
+Some aesthetic choices to determine the look of our plots
 ```{r}
 theme_set(theme_bw() + theme(text = element_text(family = 'Arial'),
                              panel.grid.minor = element_blank(),    # remove axis grid
@@ -30,7 +31,7 @@ celltype_colors <- c("ENB"="#e8a623ff", "LNB"="#e17827ff", "TAP"="#20854EFF", "a
                      "qNSC"="#0072B5FF", "Ep"="#7876B1FF", "other"="gray50", "MG"="#6F99ADFF")
 ```
 
-# Read the count matrix and metadata
+# Read the count matrix and corresponding metadata
 ```{r}
 metadata <- read_tsv(here("03_single-cell-RNA-seq", "count_matrix", "metadata.tsv.gz"),
                      col_types = "ccnnncnnclnnncccnnc") %>%
@@ -66,9 +67,7 @@ A little test plot showing the number of UMIs and genes per cell
   scale_color_viridis_c()
 ```
 
-# Figure 3 plots
-
-## Figure 3b
+## Figure 3b - UMAP of all cells, colored by cell type
 
 Plot the UMAP that shows our cell types
 ```{r}
@@ -105,6 +104,10 @@ off_target <- metadata %>%
   pivot_wider(names_from = "in_lineage", values_from = "n") %>% 
   mutate(label = paste0(formatC(100 * `FALSE` / (`FALSE` + `TRUE`), format = "f", digits = 1), "%"))
 
+off_target
+```
+
+```{r}
 pie1 <- metadata %>% filter(sample == "sample #1" & eYFP_counts > 0) %>%
   left_join(off_target, by = "sample") %>%
   ggplot(aes(x = "", fill = in_lineage, label = label)) +
@@ -122,8 +125,9 @@ pie2 <- metadata %>% filter(sample == "sample #2" & eYFP_counts > 0) %>%
   theme(legend.position = "none", strip.text = element_text(hjust=1))
 ```
 
-## Supplementary Figure S4h
+## Supplementary Figure S4h - origin of cells
 ```{r}
+# First, calculate the 2D kernel density estimate in the UMAP for both samples
 data <- tibble(x = metadata$UMAP1, y = metadata$UMAP2, group = metadata$batch)
 data.group1 <- dplyr::filter(data, group == "WT1")
 data.group2 <- dplyr::filter(data, group == "WT2")
@@ -151,6 +155,7 @@ ii <- cbind(ix, iy)
 data$density.group1 <- dens.group1$z[ii]
 data$density.group2 <- dens.group2$z[ii]
 
+# For every cell, subtract the two densities at this position to get the color
 data %>%
   ggplot(aes(x = x, y = -y, color = density.group1 - density.group2)) +
   geom_point(size = .3) +
@@ -158,14 +163,15 @@ data %>%
   coord_fixed() +
   geom_text(data = ct_plotlabs,
             mapping = aes(x = UMAP1, y = -UMAP2, label = celltype),
-            inherit.aes = F, textface = "bold") +
+            inherit.aes = F, fontface = "bold") +
   theme(legend.position = c(0.25, 0.25), legend.background = element_blank()) +
   labs(x = "UMAP1", y = "UMAP2", color = "Δ cell density")
-
+```
+```{r, include=FALSE}
 # ggsave("Supplementary_Figure_S4h.svg", height = 10, width = 10, units = "cm")
 ```
 
-## Supplementary Figure S4i
+## Supplementary Figure S4i - highlighting cells that express eYFP
 ```{r}
 metadata %>%
   slice_sample(prop=1) %>% # shuffle point plotting order
@@ -178,11 +184,13 @@ metadata %>%
   theme(legend.position = "none") +
   scale_color_manual(values=c(celltype_colors, c("TRUE"="#ffc40c", "FALSE"="gray50"))) +
   labs(x = "UMAP1", y = "UMAP2")
+```
 
+```{r, include=FALSE}
 # ggsave("Supplementary_Figure_S4i.svg", height = 10, width = 10, units = "cm")
 ```
 
-## Supplementary Figure S4j
+## Supplementary Figure S4j- highlighting cells that express Cre
 ```{r}
 metadata %>%
   filter(Cre_counts == 0) %>%
@@ -196,11 +204,13 @@ metadata %>%
   theme(legend.position = "none") +
   scale_color_manual(values=c(celltype_colors, c("TRUE"="#ffc40c", "FALSE"="gray50"))) +
   labs(x = "UMAP1", y = "UMAP2")
+```
 
+```{r, include=FALSE}
 # ggsave("Supplementary_Figure_S4j.svg", height = 10, width = 10, units = "cm")
 ```
 
-## Figure 3c
+## Figure 3c - proportion of cells that express eYFP or NeoR
 ```{r}
 group_counts <- metadata %>%
   mutate(sorting = if_else(celltype %in% c("LNB", "Ep"), "eYFP+", "")) %>%
@@ -208,28 +218,29 @@ group_counts <- metadata %>%
   group_by(celltype, sample, sorting) %>%
   tally()
 
+transgene_fill <- c("eYFP- NeoR+"="#008000", "eYFP+ NeoR+"="#80A206", "eYFP- NeoR-"="gray75", "eYFP+ NeoR-"="#ffc40c")
+
 metadata %>%
   filter(celltype != "other") %>%
   mutate(transgene_exp = fct_relevel(transgene_exp, "eYFP- NeoR-", "eYFP- NeoR+", "eYFP+ NeoR+"),
          sorting = if_else(celltype %in% c("LNB", "Ep"), "eYFP+", "")) %>%
-  #left_join(ctlabel) %>%
   ggplot(aes(y = fct_rev(celltype), fill = transgene_exp)) +
   geom_bar(position="fill") +  
   geom_text(data = group_counts, size = 2,
             mapping = aes(y = fct_rev(celltype), x = .15, label = str_c("m=", n)),
             inherit.aes = F) +
   facet_grid(sorting ~ sample, space = "free", scales='free_y') +
-  scale_fill_manual(values=c("eYFP- NeoR+"="#008000", "eYFP+ NeoR+"="#80A206", "eYFP- NeoR-"="gray75", "eYFP+ NeoR-"="#ffc40c")) +
+  scale_fill_manual(values=transgene_fill) +
   scale_x_continuous(labels = scales::percent_format(accuracy = 1),
                      limits = c(0,1), breaks=0:2/2, minor_breaks = 0:4/4) +
-  #scale_y_discrete(label = ctlabel) +
   labs(x = "fraction of cells", y = "", fill = "") +
-  theme(legend.position = "top", legend.direction = "horizontal", axis.text.x = element_text(angle = 45, hjust = 1)) +
+  theme(legend.position = "top", legend.direction = "horizontal",
+        axis.text.x = element_text(angle = 45, hjust = 1)) +
   guides(fill = guide_legend(reverse = TRUE))
 ```
 
-## Figure 3d
-```{r}
+## Figure 3d - boxplots + beeswarm plots of UMIs per cell
+```{r, collapse=TRUE}
 metadata %>%
   mutate(sorting = if_else(celltype %in% c("LNB", "Ep"), "eYFP+", "")) %>%
   filter(celltype != "other") %>% 
@@ -243,7 +254,7 @@ metadata %>%
   xlim(c(NA, 50))
 ```
 
-## Figure 3e
+## Figure 3e - Maximum Likelihood Estimation of labeling efficiency
 
 Add a penalty to prevent tiny mu_R (tiny expression strength of the resistance gene)  
 blue = 0  
@@ -316,10 +327,12 @@ mle_labeling_efficiency <- function(kY, kR, S, ...) {
 ```
 
 Use the above likelihood function to estimate our parameters for every cell type per sample
-```{r}
+```{r, message=FALSE, warning=FALSE}
 mle_res <- metadata %>%
   group_by(celltype, sample) %>% 
   summarise(mle_labeling_efficiency(kY=eYFP_counts, kR=NeoR_counts, S=n_UMIs, control=list("maxit"=5000)))
+
+mle_res
 ```
 
 ```{r}
@@ -345,15 +358,18 @@ mle_res_fmt %>%
   scale_x_continuous(labels = scales::percent_format(accuracy = 1),
                      limits = c(0,1), breaks=0:2/2) +
   labs(x = "estimated fraction", y = "", fill = "") +
-  theme(legend.position = "top", legend.direction = "horizontal", axis.text.x = element_text(angle = 45, hjust = 1)) +
+  theme(legend.position = "top", legend.direction = "horizontal",
+        axis.text.x = element_text(angle = 45, hjust = 1)) +
   guides(fill = guide_legend(reverse = TRUE))
 ```
 
-## Figure 3f: Differential expression of eYFP+ vs. eYFP- cells
+## Figure 3f - Differential expression of eYFP+ vs. eYFP- cells
 
-Mouse genes associated with GO-term GO:0009615 (response to virus)
+Mouse genes associated with GO-term [GO:0009615](https://www.ebi.ac.uk/QuickGO/term/GO:0009615) (response to virus)
 ```{r}
 viral_resp_genes <- c('Cnot7', 'Ccl19', 'Tlr8', 'Polr3f', 'Rnasel', 'G3bp1', 'Trex1', 'Arf1', 'Gm13271', 'Htra1', 'Nlrc5', 'Src', 'Ifnlr1', 'Mill2', 'Atg7', 'Tkfc', 'Ddx58', 'Cyp1a1', 'Ifi27l2a', 'Ifi27l2b', 'Oas1g', 'Acta2', 'Aimp1', 'Ifna5', 'Il12b', 'Ifitm1', 'Exosc4', 'Il23a', 'Crcp', 'Bst2', 'Ifna16', 'Ddx41', 'Ifit1', 'Oasl2', 'Ifna12', 'Pqbp1', 'Slfn8', 'Ifngr1', 'Irf7', 'Ifit1bl1', 'Serinc5', 'Gm13290', 'Nop53', 'Rtp4', 'Mapk11', 'Riok3', 'Trim5', 'Rrp1b', 'Cxcl9', 'Tlr7', 'Ufd1', 'Skp2', 'Rsad2', 'Zmynd11', 'Gpam', 'Gli2', 'Lgals8', 'Dhx58', 'Elmod2', 'Trim6', 'Unc13d', 'Gm13276', 'Pycard', 'Gm13278', 'Irf5', 'Ticam2', 'Il33', 'Gtf2f1', 'Ifnl3', 'Pcbp2', 'Nlrp3', 'Mul1', 'Xpr1', 'Tbk1', 'Gm49380', 'Trim25', 'Fadd', 'Dtx3l', 'Gm13288', 'Polr3g', 'Trim38', 'Oas1b', 'Trim12c', 'Ifnar1', 'Eif2ak2', 'Gbp4', 'Becn1', 'Hyal3', 'Ppm1b', 'Oas2', 'Sting1', 'Ticam1', 'Lgals9', 'Tspan32', 'Tbx21', 'Ddx60', 'Dhx36', 'Rnf135', 'Mavs', 'Eif2ak4', 'Agbl5', 'Oas1e', 'Trim30a', 'Apobec3', 'Exosc5', 'Ifna9', 'Cd86', 'Il23r', 'Oas3', 'Mov10', 'Itch', 'Vwce', 'Chrm2', 'Stat1', 'Irf2', 'Sec14l1', 'Polr3c', 'Fv1', 'Rps15a', 'Trim30c', 'Cd207', 'Rnf26', 'Prf1', 'Tlr3', 'Ifnk', 'Ifnz', 'Xcl1', 'Traf3ip1', 'Oprk1', 'Gm13289', 'Agbl4', 'Gsdme', 'Ercc6', 'Ifna11', 'Ikbke', 'Uri1', 'Ddx3x', 'Nlrx1', 'Hyal1', 'Isg20', 'Bnip3', 'Ttc4', 'Ifngr2', 'Clu', 'Zmpste24', 'Ifna4', 'Cgas', 'Trim44', 'Gbf1', 'Spon2', 'Cxadr', 'Bcl2', 'Lcn2', 'Ivns1abp', 'Cd40', 'Treml4', 'Irf3', 'Mx2', 'Ap1s1', 'Duox2', 'Tlr13', 'Aicda', 'Il12rb1', 'Batf3', 'Traf3', 'Fgl2', 'Ifna13', 'Traf3ip2', 'Cfl1', 'Cd37', 'Gm13287', 'Ifna6', 'Parp9', 'Klra8', 'Il4', 'Pum2', 'Ddit4', 'Ifnab', 'Oas1f', 'Oas1a', 'Ifit3b', 'Zbp1', 'Stmn1', 'Bcl2l1', 'Setd2', 'Irak3', 'Dclk1', 'Trim12a', 'Gm13279', 'Polr3k', 'Irgm2', 'Map3k14', 'Crebzf', 'Gm13275', 'Gm45717', 'Rnase6', 'Bcl3', 'Tspan6', 'Cxcl10', 'Gm13285', 'Aim2', 'Trim11', 'Ptprc', 'Abcc9', 'Lsm14a', 'Tnfsf4', 'Ccl5', 'Ifitm6', 'Chuk', 'Tgtp1', 'Itgax', 'Ifitm2', 'Mir29b-1', 'Zdhhc1', 'Adar', 'Mmp12', 'Shfl', 'Rnf125', 'Tgtp2', 'Polr3e', 'Ankrd17', 'Card9', 'Cdk6', 'Plscr1', 'Ifng', 'Penk', 'Il2ra', 'Tarbp2', 'Nploc4', 'Irf1', 'Ilf3', 'Apob', 'Mst1r', 'Serinc3', 'Abcf3', 'Gpatch3', 'Zcchc3', 'Ifne', 'Isg15', 'Polr3b', 'F2rl1', 'Ifit1bl2', 'Myd88', 'Usp15', 'Ddx17', 'Stat2', 'Samhd1', 'Ncbp3', 'Gm13277', 'Slfn9', 'Tagap', 'Ifnb1', 'Zc3hav1', 'Polr3h', 'Ccdc130', 'Hspb1', 'Trim30d', 'Il1b', 'Hnrnpul1', 'Ptpn22', 'Tlr9', 'Sin3a', 'Mapk14', 'C1qbp', 'Ddx21', 'Il15', 'Rnf216', 'Nt5c3', 'Ddx1', 'Gm13272', 'Oasl1', 'Odc1', 'Selenok', 'Fmr1', 'Ifna7', 'Eef1g', 'Trim15', 'Ifna2', 'Pml', 'Bnip3l', 'Ifit3', 'Il12a', 'Oas1c', 'Cct5', 'Nlrp9b', 'Ifitm3', 'Hyal2', 'Ilrun', 'Gata3', 'Spn', 'Il27', 'Zc3h12a', 'Ifnar2', 'Ifitm7', 'Aen', 'Polr3d', 'Ifna14', 'Oas1h', 'Foxp3', 'Tnf', 'Ifih1', 'Wdfy4', 'Gm13283', 'Ifna15', 'Ifna1', 'Ifnl2', 'Cd8a', 'Pum1', 'Ifit2', 'Il6', 'Apobec1', 'Trim30b', 'Kcnj8', 'Oas1d')
+
+# convert gene symbols to ensembl gene IDs
 viral_resp_genes_ensg <- symbol2ensg[viral_resp_genes]
 
 # list of transgenes (in order to remove them from the differential expression [DE] analysis)
@@ -386,7 +402,7 @@ head(pseudobulk)
 Run DESeq2 on pseudobulk samples. We're using the likelihood ratio test (LRT) to test the
 full model `~ batch + cluster + condition` against the reduced model `~ batch + cluster`.
 In this case, `condition` is a boolean variable indicating whether cells express eYFP or not.
-```{r}
+```{r, collapse=TRUE}
 condition <- factor(str_extract(colnames(pseudobulk), "_N?T_"))
 col_data <- DataFrame(
   condition = condition,
@@ -411,7 +427,7 @@ res %>% filter(padj <= 0.05) %>% arrange(padj) %>% mutate(symbol = ensg2symbol[g
 ```
 
 Plot the results (Fig 3f)
-```{r}
+```{r, collapse=T}
 p_ma <- res %>%
   mutate(is_viral = gene %in% viral_resp_genes_ensg) %>%
   arrange(is_viral) %>%
@@ -438,14 +454,17 @@ p_dens <- res %>%
 p_ma + p_dens &
   ylim(-4, 4) &
   plot_layout(widths = c(5, 1))
+```
 
+```{r, include=FALSE}
 # ggsave("Figure_3f.svg", height = 8, width = 10, units = "cm")
 ```
 
-# Supplementary Figure S4k
+# Supplementary Figure S4k - Differential expression of eYFP+ vs. eYFP-/NeoR+ cells
 
-Here, we consider eYFP+ cells as transduced and eYFP-/NeoR+ as non-transduced.
-```{r}
+Here, we consider eYFP+ cells as transduced and eYFP-/NeoR+ as non-transduced.  
+In this comparison we have very few cells because NeoR+ cells are quite rare. Hence we cannot include cell type as a covariate.
+```{r, collapse=T}
 # get the indices of cells of the four different pseudobulk groups
 transduced_bc_1 <- metadata %>%
   filter(eYFP_counts > 0 & batch == "WT1" & celltype %in% lineage_ct) %>%
@@ -484,7 +503,7 @@ res <- results(dds) %>%
 ```
 
 
-```{r}
+```{r, collapse=T}
 sig_res <- res %>% filter(padj <= 0.05) %>% 
   mutate(symbol = ensg2symbol[gene])
 
@@ -514,22 +533,22 @@ p_dens <- res %>%
 p_ma + p_dens &
   ylim(-6.6, 6.6) &
   plot_layout(widths = c(5, 1))
+```
 
+```{r, include=FALSE}
 # ggsave("Supplementary_Figure_S4k.svg", height = 8, width = 10, units = "cm")
 ```
 High log2foldChange = higher expression in transduced cells  
 Low log2foldChange = lower expression in transduced cells  
 
-
-
-# Supplementary Figure S4l
+# Supplementary Figure S4l - eYFP+ cell vs. v-SVZ cells from [Kalamakis et al. 2019](https://pubmed.ncbi.nlm.nih.gov/30827680/)
 
 Differential expression of our eYFP+ cells vs. adult NSC-lineage cells from the v-SVZ from Kalamakis et al. 2019
 
 ***
 
 First, integrate the two datasets into one using the SCTransform-workflow described in the Seurat vignette [here](https://satijalab.org/seurat/v3.2/integration.html). The aim is to remove batch effects in order to make these two different datasets roughly comparable.
-```{r}
+```{r, message=FALSE, warning=FALSE}
 kalamakis_data <- Read10X(data.dir = here("03_single-cell-RNA-seq", "external_data", "Kalamakis_2019"))
 metadata_kalamakis <- read.csv(here("03_single-cell-RNA-seq", "external_data", "Kalamakis_2019", "metadata_kalamakis.csv"), row.names = 1)
 kalamakis <- CreateSeuratObject(counts = kalamakis_data, project = "kalamakis", meta.data = metadata_kalamakis)
@@ -558,11 +577,15 @@ quiet <- function(x) {
 }
 ```
 
-```{r}
+Integrate the datasets as shown in the vignette
+```{r, message=FALSE, warning=FALSE, results=FALSE}
 samples <- list("kalamakis" = kalamakis, "aavtrace" = aavtrace)
 for (i in names(samples)) {
     samples[[i]] <- quiet(SCTransform(samples[[i]], verbose = FALSE))
 }
+```
+
+```{r, collapse=TRUE}
 int.features <- SelectIntegrationFeatures(object.list = samples, nfeatures = 1500)
 int.list <- PrepSCTIntegration(object.list = samples, anchor.features = int.features)
 
@@ -580,11 +603,12 @@ DimPlot(int.integrated)
 ```
 
 Calculate the neighbor graph on the integrated dataset and cluster cells
-```{r}
+```{r, collapse=TRUE}
 int.integrated <- FindNeighbors(int.integrated, dims = 1:35)
 int.integrated <- FindClusters(int.integrated, resolution = 0.1, algorithm = 4)
 ```
 
+Plot the two integrated datasets colored by source
 ```{r}
 int_tbl <- tibble(
   bc = colnames(int.integrated),
@@ -621,7 +645,7 @@ head(pseudobulk)
 ```
 
 Run DESeq2 between the two data sets. Here we have enough cells to add celltype as a covariate again
-```{r}
+```{r, collapse=TRUE}
 condition <- factor(str_extract(colnames(pseudobulk), "[a-z]+"))
 col_data <- DataFrame(
   condition = condition,
@@ -641,7 +665,7 @@ res <- results(dds) %>%
 ```
 
 Plot the MA-plot shown in Supplementary Figure S4l
-```{r}
+```{r, collapse=TRUE}
 p_ma <- res %>%
   mutate(is_viral = gene %in% viral_resp_genes) %>%
   arrange(is_viral) %>% 
@@ -668,8 +692,13 @@ p_dens <- res %>%
 p_ma + p_dens &
   ylim(-15, 15) &
   plot_layout(widths = c(5, 1))
+```
 
+```{r, include=FALSE}
 # ggsave("Supplementary_Figure_S4l.svg", height = 8, width = 10, units = "cm")
 ```
 
-
+### sessionInfo()
+```{r}
+sessionInfo()
+```
