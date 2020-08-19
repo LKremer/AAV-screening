@@ -26,12 +26,14 @@ These scripts can be run with [Snakemake](https://snakemake.readthedocs.io).
 ## Data
 #### Our filtered single cell RNA-seq count matrix, including row- and column labels and metadata
 [03_single-cell-RNA-seq/count_matrix/](03_single-cell-RNA-seq/count_matrix/)
-## Code
+## Code + Results
+The Python and R code including intermediate results and plots can be found in these HTML files (download and then open in a web browser).
 #### The Python code used to get from a raw unfiltered count matrix to our UMAP and clustering
 [03_single-cell-RNA-seq/01_scRNA-seq-preprocessing.html](03_single-cell-RNA-seq/01_scRNA-seq-preprocessing.html)
+(or view the [raw Python code](03_single-cell-RNA-seq/01_scRNA-seq-preprocessing.py))
 #### The R code used for the analyses depicted in Figures 3 and S4h-l, including these plots
-[03_single-cell-RNA-seq/02_scRNA-seq-analysis.Rmd](03_single-cell-RNA-seq/02_scRNA-seq-analysis.Rmd)
-
+[03_single-cell-RNA-seq/02_scRNA-seq-analysis.html](03_single-cell-RNA-seq/02_scRNA-seq-analysis.html)
+(or view the [raw R Markdown code](03_single-cell-RNA-seq/02_scRNA-seq-analysis.Rmd))
 
 
 
@@ -68,4 +70,4 @@ To remedy this problem, barcode counts were further scaled by their abundance in
 For each sample, normalized barcode proportions were calculated by dividing the normalized barcode counts by the total number of valid barcodes.
 The mean of these proportions was then used to rank AAVs within and across celltypes (Figure 1d-i).
 Two AAVs that performed consistently well across replicates and in both experiments were chosen for further validation.
-All scripts used in the analysis are available at https://github.com/LKremer/AAV-screening.
+All scripts used in the analysis are available in this GitHub repo here.
