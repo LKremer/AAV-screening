@@ -24,14 +24,14 @@ These scripts can be run with [Snakemake](https://snakemake.readthedocs.io).
 
 # Part II: Single cell RNA-seq of cells labeled with AAV1_P5
 ## Data
-#### Our filtered single cell RNA-seq count matrix, including row- and column labels and metadata
+#### Our filtered single cell RNA-seq count matrix, including row- and column labels and metadata:
 [03_single-cell-RNA-seq/count_matrix/](03_single-cell-RNA-seq/count_matrix/)
 ## Code + Results
 The Python and R code including intermediate results and plots can be found in these HTML files (download and then open in a web browser).
-#### The Python code used to get from a raw unfiltered count matrix to our UMAP and clustering
+#### The Python code used to get from a raw unfiltered count matrix to our UMAP and clustering:
 [03_single-cell-RNA-seq/01_scRNA-seq-preprocessing.html](03_single-cell-RNA-seq/01_scRNA-seq-preprocessing.html)
 (or view the [raw Python code](03_single-cell-RNA-seq/01_scRNA-seq-preprocessing.py))
-#### The R code used for the analyses depicted in Figures 3 and S4h-l, including these plots
+#### The R code used for the analyses depicted in Figures 3 and S4h-l, including these plots:
 [03_single-cell-RNA-seq/02_scRNA-seq-analysis.html](03_single-cell-RNA-seq/02_scRNA-seq-analysis.html)
 (or view the [raw R Markdown code](03_single-cell-RNA-seq/02_scRNA-seq-analysis.Rmd))
 
