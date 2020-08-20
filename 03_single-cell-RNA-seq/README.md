@@ -1,6 +1,6 @@
 ## Raw sequencing data
 
-All raw reads in FASTQ format are currently pending acceptation at the NCBI Gene Expression Omnibus (GEO).
+All raw reads in FASTQ format are currently pending approval at the NCBI Gene Expression Omnibus (GEO).
 Once they are accepted, the raw FASTQ files will be available under accession [GSE145172](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE145172).
 
 ## Read mapping and transcript quantification
@@ -49,4 +49,4 @@ kb count --h5ad --verbose \
   
 This produces two unfiltered count matrices in h5ad-format here:
 "sample_1/counts_unfiltered/adata.h5ad" and "sample_2/counts_unfiltered/adata.h5ad".
-These files can be opened in Scanpy for further filtering and pre-processing of our single cell data, "01_scRNA-seq-preprocessing.html".
+These files can be opened in Scanpy for further filtering and pre-processing of our single cell data, see "01_scRNA-seq-preprocessing.html".
