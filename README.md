@@ -8,6 +8,9 @@ This repository contains all code and data that was generated as part of the stu
 #### Raw sequencing results:
 The FASTQ files are deposited at GEO (accession [GSE145172](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE145172), AAV_library_1 and AAV_library_3).
 
+#### Information about input libraries #1 and #3
+The table [02_analysis/tables/input_library_info.csv](02_analysis/tables/input_library_info.csv) lists the relative abundance of each AAV variant in the input library and the barcode that was assigned to each variant.
+
 ## Results
 #### All plots of barcode / serotype proportions are here:
 [02_analysis/plots/](02_analysis/plots/)
