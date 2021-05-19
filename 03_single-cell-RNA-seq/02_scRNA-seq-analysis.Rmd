@@ -34,7 +34,7 @@ celltype_colors <- c("ENB"="#e8a623ff", "LNB"="#e17827ff", "TAP"="#20854EFF", "a
 # Read the count matrix and corresponding metadata
 ```{r}
 metadata <- read_tsv(here("03_single-cell-RNA-seq", "count_matrix", "metadata.tsv.gz"),
-                     col_types = "ccnnncnnclnnncccnnc") %>%
+                     col_types = "ccnnncnnclnnncccnncnnc") %>%
   mutate(transgene_exp = fct_relevel(transgene_exp, "eYFP- NeoR-", "eYFP- NeoR+", "eYFP+ NeoR+"),
          celltype = fct_relevel(celltype, c("qNSC", "aNSC", "TAP", "ENB", "LNB", "Ep", "other")))
 ```
@@ -423,8 +423,18 @@ res <- results(dds) %>%
 
 There are the following 18 differentially expressed genes:
 ```{r}
-res %>% filter(padj <= 0.05) %>% arrange(padj) %>% mutate(symbol = ensg2symbol[gene]) %>% dplyr::select(-stat)
+de_gene_tbl <- res %>% filter(padj <= 0.05) %>% arrange(padj) %>%
+  mutate(symbol = ensg2symbol[gene]) %>%
+  dplyr::select(geneSymbol=symbol, geneID=gene, log2FoldChange, meanExpression=baseMean, adjustedPvalue=padj)
+
+de_gene_tbl
 ```
+All of them are more lowly expressed in transduced cells (negative log2FoldChange).  
+Save them to a file:
+```{r}
+write_csv(de_gene_tbl, here("03_single-cell-RNA-seq", "differentially_expressed_genes.csv"))
+```
+
 
 Plot the results (Fig 3f)
 ```{r, collapse=T}
