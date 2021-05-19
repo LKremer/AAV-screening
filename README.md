@@ -50,3 +50,7 @@ The FASTQ files are deposited at GEO (accession [GSE145172](https://www.ncbi.nlm
 [03_single-cell-RNA-seq/02_scRNA-seq-analysis.html](03_single-cell-RNA-seq/02_scRNA-seq-analysis.html)
 (or view the [raw R Markdown code](03_single-cell-RNA-seq/02_scRNA-seq-analysis.Rmd))  
 If you want to view the HTML files above, please download them and open them in a web browser.
+
+#### A table with the 18 differentially expressed genes:
+[03_single-cell-RNA-seq/differentially_expressed_genes.csv](03_single-cell-RNA-seq/differentially_expressed_genes.csv)  
+These genes appear to be more lowly expressed in transduced cells compared to non-transduced cells.
