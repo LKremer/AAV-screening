@@ -1,6 +1,8 @@
 ## *In vivo* high-throughput screening of novel adeno-associated viral capsids identifies variants for transduction of adult neural stem cells within the subventricular zone
 
-This repository contains all code and data that was generated as part of the study above by Dehler and Kremer *et al*.
+This repository contains all code and data that was generated as part of the [study](https://doi.org/10.1016/j.omtm.2021.07.001) above by Kremer and Cerrizuela *et al*.
+
+The manuscript is now published and available online at [https://doi.org/10.1016/j.omtm.2021.07.001](https://doi.org/10.1016/j.omtm.2021.07.001).
 
 # Part I: Screening of AAV serotypes with RNA sequencing
 
